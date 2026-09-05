@@ -1,0 +1,325 @@
+<!doctype html>
+<html lang="ru">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Козырёк 19,5×2,4 — расчёт фермы, прогонов и узла</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Golos+Text:wght@400;500;600&display=swap" rel="stylesheet">
+<style>
+  :root{
+    --ink:#1f2a37; --muted:#6b7684; --rule:#d9dee5; --paper:#ffffff; --field:#f3f5f8;
+    --cad:#1f4fbf; --ok:#2f8f5b; --warn:#c98a12; --bad:#c8311d; --new:#c8311d;
+  }
+  *{box-sizing:border-box}
+  html{font-size:16px}
+  body{margin:0;background:var(--paper);color:var(--ink);font-family:"Golos Text",system-ui,sans-serif;line-height:1.45}
+  header{padding:28px 32px 18px;border-bottom:1px solid var(--rule)}
+  header h1{margin:0 0 6px;font-size:1.55rem;font-weight:600;letter-spacing:-.01em}
+  header p{margin:0;color:var(--muted);max-width:70ch}
+  main{display:grid;grid-template-columns:340px 1fr;gap:0;min-height:calc(100vh - 100px)}
+  aside{border-right:1px solid var(--rule);padding:22px 24px 40px;background:#fafbfc}
+  section.view{padding:22px 32px 48px;min-width:0}
+  fieldset{border:0;padding:0;margin:0 0 22px}
+  legend{font-weight:600;padding:0;margin-bottom:8px}
+  .row{display:grid;grid-template-columns:1fr 92px 46px;align-items:center;gap:8px;padding:5px 0;border-bottom:1px dashed var(--rule)}
+  .row label{font-size:.92rem}
+  .row small{display:block;color:var(--muted);font-size:.76rem;line-height:1.25}
+  .row input{width:100%;padding:6px 8px;border:1px solid var(--rule);border-radius:4px;background:var(--field);font:inherit;font-size:.95rem;text-align:right;color:var(--ink)}
+  .row input:focus{outline:2px solid var(--cad);outline-offset:1px;background:#fff}
+  .row span{color:var(--muted);font-size:.85rem}
+  .presets{display:flex;gap:6px;flex-wrap:wrap;margin:6px 0 4px}
+  .presets button, .actions button{font:inherit;font-size:.85rem;padding:6px 10px;border:1px solid var(--rule);background:#fff;border-radius:4px;cursor:pointer;color:var(--ink)}
+  .presets button:hover, .actions button:hover{border-color:var(--cad);color:var(--cad)}
+  .presets button:focus-visible, .actions button:focus-visible{outline:2px solid var(--cad);outline-offset:1px}
+  .verdict{display:grid;grid-template-columns:repeat(auto-fit,minmax(150px,1fr));gap:12px;margin:0 0 20px}
+  .v{padding:12px 14px;border:1px solid var(--rule);border-radius:6px;border-left-width:5px}
+  .v b{display:block;font-size:1.35rem;font-weight:600;line-height:1.1}
+  .v span{color:var(--muted);font-size:.82rem}
+  .v.ok{border-left-color:var(--ok)} .v.warn{border-left-color:var(--warn)} .v.bad{border-left-color:var(--bad)}
+  svg{width:100%;height:auto;display:block;border:1px solid var(--rule);border-radius:6px;background:#fff}
+  svg text{font-family:"Golos Text",system-ui,sans-serif}
+  .legend{display:flex;gap:16px;flex-wrap:wrap;color:var(--muted);font-size:.82rem;margin:8px 0 22px}
+  .legend i{display:inline-block;width:22px;height:4px;vertical-align:middle;margin-right:6px;border-radius:2px}
+  h2{font-size:1.05rem;margin:24px 0 8px;font-weight:600}
+  table{width:100%;border-collapse:collapse;font-size:.9rem}
+  th,td{padding:6px 8px;border-bottom:1px solid var(--rule);text-align:right;white-space:nowrap}
+  th{color:var(--muted);font-weight:500}
+  th:first-child,td:first-child{text-align:left}
+  td.k{font-weight:600}
+  td.ok{color:var(--ok)} td.warn{color:var(--warn)} td.bad{color:var(--bad)}
+  .note{color:var(--muted);font-size:.85rem;max-width:80ch}
+  .actions{margin-top:10px}
+  footer{padding:16px 32px 28px;border-top:1px solid var(--rule);color:var(--muted);font-size:.82rem;max-width:90ch}
+  @media (max-width:860px){main{grid-template-columns:1fr}aside{border-right:0;border-bottom:1px solid var(--rule)}section.view{padding:18px 16px 40px}header{padding:20px 16px 14px}}
+  @media (prefers-reduced-motion:no-preference){svg path,svg line{transition:stroke .25s}}
+</style>
+</head>
+<body>
+<header>
+  <h1>Консольная ферма козырька — проверочный расчёт</h1>
+  <p>Плоская рама с жёсткими узлами, труба 40×40×4 по чертежу ХХХХ.301231.01.01.01.000. Меняйте шаг ферм, снег, геометрию, прогоны и узел — усилия, устойчивость, прогиб, настил, анкеры, пластина и швы пересчитываются сразу; под каждой цифрой — формула с подстановкой. Оценка для постановки задачи, не заменяет КМ.</p>
+</header>
+<main>
+<aside>
+  <form id="f" onsubmit="return false">
+    <fieldset>
+      <legend>Нагрузки</legend>
+      <div class="presets">
+        <button type="button" data-p="1.93,1">Рядовая ферма, μ=1</button>
+        <button type="button" data-p="1.93,2.5">Рядовая, снеговой мешок μ=2,5</button>
+        <button type="button" data-p="0.965,2.5">Спаренная на стыке, μ=2,5</button>
+      </div>
+      <div class="row"><label>Шаг ферм <small>грузовая ширина; 1,93 — рядовая, 0,965 — спаренная</small></label><input id="a" type="number" step="0.01" value="1.93"><span>м</span></div>
+      <div class="row"><label>Sg — вес снегового покрова <small>СП 20.13330 табл. 10.1; Москва III район — 1,5</small></label><input id="Sg" type="number" step="0.1" value="1.5"><span>кПа</span></div>
+      <div class="row"><label>μ — коэффициент снега <small>1 без мешка; у высокой стены 2–3</small></label><input id="mu" type="number" step="0.1" value="2.5"><span>—</span></div>
+      <div class="row"><label>g — постоянная нормативная <small>обшивка 2×2 мм + подсистема + вата + каркас</small></label><input id="g" type="number" step="0.01" value="0.72"><span>кПа</span></div>
+      <div class="row"><label>γf снег / γf постоянная</label><input id="gfs" type="number" step="0.05" value="1.4"><span>—</span></div>
+      <div class="row"><label>γf постоянная</label><input id="gfg" type="number" step="0.05" value="1.1"><span>—</span></div>
+    </fieldset>
+    <fieldset>
+      <legend>Профиль и сталь</legend>
+      <div class="row"><label>Сторона трубы</label><input id="b" type="number" step="1" value="40"><span>мм</span></div>
+      <div class="row"><label>Стенка</label><input id="t" type="number" step="0.5" value="4"><span>мм</span></div>
+      <div class="row"><label>Ry <small>С245 — 240; С345 — 320</small></label><input id="Ry" type="number" step="5" value="240"><span>МПа</span></div>
+      <div class="row"><label>Кривая устойчивости <small>a / b / c (холодногнутая — c)</small></label><input id="curve" type="text" value="c"><span></span></div>
+    </fieldset>
+    <fieldset>
+      <legend>Геометрия фермы</legend>
+      <div class="row"><label>Вылет L</label><input id="L" type="number" step="10" value="2400"><span>мм</span></div>
+      <div class="row"><label>Высота стойки</label><input id="H" type="number" step="5" value="575"><span>мм</span></div>
+      <div class="row"><label>Высота торца</label><input id="Ht" type="number" step="5" value="100"><span>мм</span></div>
+      <div class="row"><label>Узел A (первая панель)</label><input id="x1" type="number" step="10" value="883"><span>мм</span></div>
+      <div class="row"><label>Узел B</label><input id="x2" type="number" step="10" value="1653"><span>мм</span></div>
+      <div class="row"><label>Нижний узел у стены <small>от низа стойки до оси нижнего пояса</small></label><input id="yb" type="number" step="5" value="97"><span>мм</span></div>
+      <div class="row"><label>Уклон верха 1-й / 2-й панели</label><input id="s1" type="number" step="0.5" value="2"><span>°</span></div>
+      <div class="row"><label>Уклон верха дальше</label><input id="s2" type="number" step="0.5" value="5"><span>°</span></div>
+    </fieldset>
+    <fieldset>
+      <legend>Крепление к стене</legend>
+      <div class="row"><label>Плечо анкеров <small>между крайними рядами: чертёж — 440, пластина 800 — 700</small></label><input id="z" type="number" step="10" value="440"><span>мм</span></div>
+      <div class="row"><label>Анкеров в ряду</label><input id="na" type="number" step="1" value="2"><span>шт</span></div>
+      <div class="row"><label>Опорная пластина <small>1 — стойка приварена к жёсткой пластине (лист 2 эскиза); 0 — проушины по чертежу, стойка гнётся между анкерами</small></label><input id="plate" type="number" step="1" min="0" max="1" value="0"><span>0/1</span></div>
+      <div class="row"><label>Допустимое растяжение на анкер <small>М16 хим. ≈ 20; М20 ≈ 35–40 (по бетону!)</small></label><input id="Tadm" type="number" step="1" value="20"><span>кН</span></div>
+    </fieldset>
+    <fieldset>
+      <legend>Прогоны верха и настил</legend>
+      <div class="row"><label>Прогон: высота × ширина × стенка <small>чертёж — 40×40×4; вариант — 80×40×3</small></label><input id="ph" type="number" step="1" value="40"><span>мм</span></div>
+      <div class="row"><label>ширина</label><input id="pb" type="number" step="1" value="40"><span>мм</span></div>
+      <div class="row"><label>стенка</label><input id="pt" type="number" step="0.5" value="4"><span>мм</span></div>
+      <div class="row"><label>Пролёт прогона <small>между фермами</small></label><input id="pl" type="number" step="10" value="1890"><span>мм</span></div>
+      <div class="row"><label>Настил: W по сортаменту <small>Н57-0,7 ≈ 11; Н75-0,8 ≈ 20 см³/м</small></label><input id="dw" type="number" step="0.5" value="11"><span>см³/м</span></div>
+    </fieldset>
+    <fieldset>
+      <legend>Узел у стены (пластина, швы)</legend>
+      <div class="presets"><button type="button" id="nodeDraw">Узел по чертежу</button><button type="button" id="nodeNew">Узел по эскизу (пластина 20, 6×М20, косынки)</button></div>
+      <div class="row"><label>Толщина пластины</label><input id="tp" type="number" step="1" value="20"><span>мм</span></div>
+      <div class="row"><label>Анкер от кромки стойки e</label><input id="ep" type="number" step="5" value="45"><span>мм</span></div>
+      <div class="row"><label>Катет шва пояс/стойка kf</label><input id="kf" type="number" step="1" value="4"><span>мм</span></div>
+      <div class="row"><label>Косынки: суммарная длина швов <small>0 — без косынок; 2×80×2 = 320</small></label><input id="lg" type="number" step="10" value="0"><span>мм</span></div>
+    </fieldset>
+    <div class="actions"><button type="button" id="csv">Скачать результаты (CSV)</button></div>
+  </form>
+</aside>
+
+<section class="view">
+  <div class="verdict" id="verdict"></div>
+  <svg id="svg" viewBox="0 0 1000 420" role="img" aria-label="Схема фермы с усилиями"></svg>
+  <div class="legend"><span><i style="background:var(--ok)"></i>до 60 %</span><span><i style="background:var(--warn)"></i>60–100 %</span><span><i style="background:var(--bad)"></i>свыше 100 %</span><span>N — продольная сила, кН (+ растяжение); цифры у стены — усилия на анкерные ряды</span></div>
+
+  <h2>Стержни</h2>
+  <table id="members"><thead><tr><th>Стержень</th><th>L, мм</th><th>N, кН</th><th>M, кН·м</th><th>σ, МПа</th><th>φ</th><th>Прочность</th><th>Устойчивость</th></tr></thead><tbody></tbody></table>
+
+  <h2>Прогоны, настил, обшивка</h2>
+  <table id="purlin"><tbody></tbody></table>
+
+  <h2>Узел крепления к стене</h2>
+  <table id="node"><tbody></tbody></table>
+
+  <h2>Опоры и прогиб</h2>
+  <table id="supports"><tbody></tbody></table>
+  <p class="note" id="notes"></p>
+</section>
+</main>
+<footer>Расчёт: стержневая модель (балочные элементы Эйлера–Бернулли, 11 узлов), нагрузка от снега и обшивки приложена к верхнему поясу, три уровня анкеров держат горизонтальные реакции, низ стойки опирается на бетон. Устойчивость — СП 16.13330.2017 п. 7.1.3, предельный прогиб консоли — СП 20.13330.2016 прил. Д (2L/180). Не учтены: ветер (для этого козырька не определяет), раскрепление из плоскости, узлы и сварные швы, проушины крепления. Исходный код — frame.py в том же репозитории.</footer>
+
+<script>
+(function(){
+const $=id=>document.getElementById(id);
+const num=id=>parseFloat($(id).value.replace(',','.'));
+const rad=d=>d*Math.PI/180;
+
+function solve(p){
+  const E=206000;
+  // section
+  const b=p.b,t=p.t, ro=2*t, ri=t;
+  const A=4*t*(b-t)-(4-Math.PI)*(ro*ro-ri*ri);
+  const I=((b**4-(b-2*t)**4)/12)*0.96;
+  const W=I/(b/2), ir=Math.sqrt(I/A);
+  // geometry
+  const t1=Math.tan(rad(p.s1)), t2=Math.tan(rad(p.s2));
+  const yT0=p.H-20, yA=yT0-p.x1*t1, yB=yA-(p.x2-p.x1)*t2, yTip=yB-(p.L-p.x2)*t2;
+  const yBot0=p.yb; const ybot=x=>yBot0+(yTip-(p.Ht-40)-yBot0)*x/p.L;
+  const nodes={S1:[0,100],S2:[0,100+p.z/2],S3:[0,100+p.z],P0:[0,yBot0],P1:[0,yT0],
+    A:[p.x1,yA],A2:[p.x1,ybot(p.x1)],B:[p.x2,yB],B2:[p.x2,ybot(p.x2)],T:[p.L,yTip],T2:[p.L,ybot(p.L)]};
+  // post chain sorted by y
+  const post=['P0','S1','S2','S3','P1'].sort((u,v)=>nodes[u][1]-nodes[v][1]);
+  const mem=[];
+  for(let i=0;i<post.length-1;i++) mem.push([post[i],post[i+1],'стойка №2']);
+  mem.push(['P1','A','верх. пояс №3'],['A','B','верх. пояс №4'],['B','T','верх. пояс №4 (торец)'],
+           ['P0','A2','ниж. пояс №1'],['A2','B2','ниж. пояс №1'],['B2','T2','ниж. пояс №1 (торец)'],
+           ['P0','A','раскос №9'],['A','A2','стойка №7'],['A2','B','раскос №8'],['B','B2','стойка №6'],['T','T2','стойка №5']);
+  const names=Object.keys(nodes), idx={}; names.forEach((n,i)=>idx[n]=i); const N=names.length;
+  function kel(L,c,s){
+    const k=[[E*A/L,0,0,-E*A/L,0,0],[0,12*E*I/L**3,6*E*I/L**2,0,-12*E*I/L**3,6*E*I/L**2],[0,6*E*I/L**2,4*E*I/L,0,-6*E*I/L**2,2*E*I/L],
+      [-E*A/L,0,0,E*A/L,0,0],[0,-12*E*I/L**3,-6*E*I/L**2,0,12*E*I/L**3,-6*E*I/L**2],[0,6*E*I/L**2,2*E*I/L,0,-6*E*I/L**2,4*E*I/L]];
+    const T=[[c,s,0,0,0,0],[-s,c,0,0,0,0],[0,0,1,0,0,0],[0,0,0,c,s,0],[0,0,0,-s,c,0],[0,0,0,0,0,1]];
+    const TtK=Array.from({length:6},()=>Array(6).fill(0)), Ke=Array.from({length:6},()=>Array(6).fill(0));
+    for(let i=0;i<6;i++)for(let j=0;j<6;j++){let v=0;for(let m=0;m<6;m++)v+=T[m][i]*k[m][j];TtK[i][j]=v;}
+    for(let i=0;i<6;i++)for(let j=0;j<6;j++){let v=0;for(let m=0;m<6;m++)v+=TtK[i][m]*T[m][j];Ke[i][j]=v;}
+    return {k,T,Ke};
+  }
+  const sn=p.Sg*p.mu, qd=p.a*(p.g*p.gfg+sn*p.gfs)/1000, qn=p.a*(p.g+sn)/1000; // kN/mm
+  const K=Array.from({length:3*N},()=>Array(3*N).fill(0)); const F=Array(3*N).fill(0), Fn=Array(3*N).fill(0);
+  const geo=[];
+  mem.forEach(([i,j,nm])=>{
+    const [xi,yi]=nodes[i],[xj,yj]=nodes[j]; const L=Math.hypot(xj-xi,yj-yi), c=(xj-xi)/L, s=(yj-yi)/L;
+    const {k,T,Ke}=kel(L,c,s); const d=[3*idx[i],3*idx[i]+1,3*idx[i]+2,3*idx[j],3*idx[j]+1,3*idx[j]+2];
+    for(let r=0;r<6;r++)for(let cc=0;cc<6;cc++)K[d[r]][d[cc]]+=Ke[r][cc];
+    if(nm.startsWith('верх')){const Lx=Math.abs(xj-xi);[[qd,F],[qn,Fn]].forEach(([q,FF])=>{const w=q*Lx;FF[3*idx[i]+1]-=w/2;FF[3*idx[j]+1]-=w/2;FF[3*idx[i]+2]-=w*Lx/12;FF[3*idx[j]+2]+=w*Lx/12;});}
+    geo.push({i,j,nm,L,c,s,k,T,d});
+  });
+  const fixed=new Set([3*idx.S1,3*idx.S1+1,3*idx.S2,3*idx.S3]); if(p.plate>=1){[ 'S1','S2','S3'].forEach(n=>fixed.add(3*idx[n]+2));}
+  const free=[];for(let d=0;d<3*N;d++)if(!fixed.has(d))free.push(d);
+  function lin(FF){
+    const n=free.length, M=free.map(r=>free.map(c=>K[r][c])), rhs=free.map(r=>FF[r]);
+    for(let i=0;i<n;i++){let mx=i;for(let r=i+1;r<n;r++)if(Math.abs(M[r][i])>Math.abs(M[mx][i]))mx=r;[M[i],M[mx]]=[M[mx],M[i]];[rhs[i],rhs[mx]]=[rhs[mx],rhs[i]];
+      for(let r=i+1;r<n;r++){const f=M[r][i]/M[i][i];if(!f)continue;for(let c=i;c<n;c++)M[r][c]-=f*M[i][c];rhs[r]-=f*rhs[i];}}
+    const x=Array(n).fill(0);for(let i=n-1;i>=0;i--){let v=rhs[i];for(let c=i+1;c<n;c++)v-=M[i][c]*x[c];x[i]=v/M[i][i];}
+    const u=Array(3*N).fill(0);free.forEach((d,i)=>u[d]=x[i]);
+    const R=u.map((_,r)=>{let v=0;for(let c=0;c<3*N;c++)v+=K[r][c]*u[c];return v-FF[r];});
+    return {u,R};
+  }
+  const D=lin(F), Nn=lin(Fn);
+  const cur={a:[0.03,0.06],b:[0.04,0.09],c:[0.04,0.14]}[p.curve]||[0.04,0.14];
+  function phi(L){const lam=L/ir,lb=lam*Math.sqrt(p.Ry/E);if(lb<0.4)return 1;const dd=9.87*(1-cur[0]+cur[1]*lb)+lb*lb;return Math.min(1,0.5*(dd-Math.sqrt(dd*dd-39.48*lb*lb))/(lb*lb));}
+  const rows=geo.map(g=>{
+    const ul=g.d.map(dd=>D.u[dd]); const loc=g.T.map(row=>row.reduce((s,v,i)=>s+v*ul[i],0));
+    const f=g.k.map(row=>row.reduce((s,v,i)=>s+v*loc[i],0)); // kN, kN·mm
+    const Nx=f[3], M=Math.max(Math.abs(f[2]),Math.abs(f[5]));
+    const sig=Math.abs(Nx)*1000/A+M*1000/W; const ph=phi(g.L);
+    const kt=sig/p.Ry, kb=Nx<0?Math.abs(Nx)*1000/(ph*A*p.Ry)+M*1000/W/p.Ry:0;
+    return {nm:g.nm,i:g.i,j:g.j,L:g.L,Nx,M:M/1000,sig,phi:Nx<0?ph:null,kt,kb,use:Math.max(kt,kb)};
+  });
+  const R=D.R, S1x=R[3*idx.S1], S2x=R[3*idx.S2], S3x=-R[3*idx.S3], V=R[3*idx.S1+1];
+  const defl=-Nn.u[3*idx.T+1]*1000, flim=2*p.L/180;
+  const Mroot=qd*p.L*p.L/2/1000, Q=qd*p.L;
+  return {A,I,W,ir,nodes,rows,S1x,S2x,S3x,V,defl,flim,Mroot,Q,qd:qd*1000,qn:qn*1000,Ta:S3x/p.na,Va:V/(3*p.na)};
+}
+
+function cls(k){return k<0.6?'ok':k<=1?'warn':'bad';}
+const fmt=(v,d=1)=>v.toLocaleString('ru-RU',{minimumFractionDigits:d,maximumFractionDigits:d});
+const pct=v=>Math.round(v*100)+' %';
+
+function draw(res,p){
+  const svg=$('svg'); const nd=res.nodes;
+  const xs=Object.values(nd).map(v=>v[0]), ys=Object.values(nd).map(v=>v[1]);
+  const minx=-260, maxx=Math.max(...xs)+120, miny=Math.min(...ys)-90, maxy=Math.max(...ys)+90;
+  const W=1000,Hh=420; const sc=Math.min((W-40)/(maxx-minx),(Hh-40)/(maxy-miny));
+  const X=x=>20+(x-minx)*sc, Y=y=>Hh-20-(y-miny)*sc;
+  let s=`<rect x="${X(-260)}" y="${Y(nd.P1[1]+80)}" width="${X(0)-X(-260)}" height="${Y(-80)-Y(nd.P1[1]+80)}" fill="#eef1f5" stroke="#c6cdd6"/>`;
+  s+=`<text x="${X(-250)}" y="${Y(nd.P1[1]+60)}" font-size="11" fill="#6b7684">ж.б. стена</text>`;
+  s+=`<rect x="${X(0)-4}" y="${Y(nd.P1[1]+20)}" width="4" height="${Y(-20)-Y(nd.P1[1]+20)}" fill="#c8311d" opacity=".6"/>`;
+  const col={ok:'#2f8f5b',warn:'#c98a12',bad:'#c8311d'};
+  res.rows.forEach(r=>{
+    const [x1,y1]=nd[r.i],[x2,y2]=nd[r.j];
+    s+=`<line x1="${X(x1)}" y1="${Y(y1)}" x2="${X(x2)}" y2="${Y(y2)}" stroke="${col[cls(r.use)]}" stroke-width="${r.nm.startsWith('стойка №2')?7:5}" stroke-linecap="round"/>`;
+    if(!r.nm.startsWith('стойка №2')){const mx=(X(x1)+X(x2))/2, my=(Y(y1)+Y(y2))/2;
+      s+=`<text x="${mx}" y="${my-8}" font-size="11" text-anchor="middle" fill="#1f2a37">${fmt(r.Nx,1)}</text>`;}
+  });
+  // anchors
+  [['S3',res.S3x,'←'],['S2',res.S2x,''],['S1',res.S1x,'→']].forEach(([n,v])=>{
+    const [x,y]=nd[n]; const T=v>0;
+    s+=`<line x1="${X(x)-60}" y1="${Y(y)}" x2="${X(x)}" y2="${Y(y)}" stroke="#1f4fbf" stroke-width="3"/>`;
+    s+=`<text x="${X(x)-64}" y="${Y(y)+4}" font-size="11" text-anchor="end" fill="#1f4fbf">${fmt(Math.abs(v),1)} кН ${n==='S3'?'растяж.':n==='S1'?'сжатие':'срез'}</text>`;
+  });
+  // load arrows
+  for(let x=150;x<p.L;x+=300){const yt=nd.P1[1]-x*Math.tan(rad(p.s1))*(x<p.x1?1:0)-(x>=p.x1?(nd.P1[1]-nd.A[1])+(x-p.x1)*Math.tan(rad(p.s2)):0);
+    s+=`<line x1="${X(x)}" y1="${Y(yt)-70}" x2="${X(x)}" y2="${Y(yt)-30}" stroke="#8a94a3" stroke-width="1.5" marker-end="url(#ar)"/>`;}
+  s+=`<text x="${X(p.L/2)}" y="${Y(nd.P1[1])-76}" font-size="11" text-anchor="middle" fill="#6b7684">q = ${fmt(res.qd,2)} кН/м (расчётная)</text>`;
+  s+=`<text x="${X(p.L)+8}" y="${Y(nd.T[1])+4}" font-size="11" fill="#6b7684">f = ${fmt(res.defl,1)} мм</text>`;
+  svg.innerHTML=`<defs><marker id="ar" markerWidth="8" markerHeight="8" refX="4" refY="4" orient="auto"><path d="M0,0 L8,4 L0,8 z" fill="#8a94a3"/></marker></defs>`+s;
+}
+
+function run(){
+  const p={};['a','Sg','mu','g','gfs','gfg','b','t','Ry','L','H','Ht','x1','x2','yb','s1','s2','z','na','Tadm','plate','ph','pb','pt','pl','dw','tp','ep','kf','lg'].forEach(k=>p[k]=num(k));
+  p.curve=$('curve').value.trim().toLowerCase();
+  if(!(p.x1<p.x2&&p.x2<p.L&&p.H>p.Ht))return;
+  const r=solve(p);
+  const worst=r.rows.reduce((m,x)=>x.use>m.use?x:m,r.rows[0]);
+  const ka=r.Ta/p.Tadm, kf=r.defl/r.flim;
+  $('verdict').innerHTML=[
+    [worst.use,'стержни (макс.)',`${pct(worst.use)}`,worst.nm+(p.plate<1&&worst.nm.startsWith('стойка №2')?' — изгиб между проушинами':'')],
+    [kf,'прогиб торца',`${fmt(r.defl,1)} мм`,`допуск ${fmt(r.flim,1)} мм`],
+    [ka,'анкер верхнего ряда',`${fmt(r.Ta,1)} кН`,`допустимо ${fmt(p.Tadm,0)} кН на шт.`],
+    [r.S1x/60,'опирание низа стойки',`${fmt(r.S1x,1)} кН`,'сжатие в бетон — нужна пластина'],
+  ].map(([k,l,v,sub])=>`<div class="v ${cls(k)}"><b>${v}</b><span>${l}<br>${sub}</span></div>`).join('');
+  draw(r,p);
+  $('members').querySelector('tbody').innerHTML=r.rows.map(x=>`<tr><td>${x.nm} (${x.i}–${x.j})</td><td>${fmt(x.L,0)}</td><td>${fmt(x.Nx,1)}</td><td>${fmt(x.M,2)}</td><td>${fmt(x.sig,0)}</td><td>${x.phi===null?'—':fmt(x.phi,2)}</td><td class="${cls(x.kt)}">${pct(x.kt)}</td><td class="${x.phi===null?'':cls(x.kb)}">${x.phi===null?'—':pct(x.kb)}</td></tr>`).join('');
+  $('supports').querySelector('tbody').innerHTML=[
+    ['Нагрузка на ферму: расчётная / нормативная',`${fmt(r.qd,2)} / ${fmt(r.qn,2)} кН/м`],
+    ['Момент в заделке q·L²/2 (для сверки)',`${fmt(r.Mroot,1)} кН·м; Q = ${fmt(r.Q,1)} кН`],
+    ['Верхний ряд анкеров — растяжение (на ряд / на анкер)',`${fmt(r.S3x,1)} / ${fmt(r.Ta,1)} кН`],
+    ['Средний ряд — горизонтальная реакция',`${fmt(r.S2x,1)} кН`],
+    ['Низ стойки — опирание на бетон',`${fmt(r.S1x,1)} кН`],
+    ['Вертикальная реакция (срез, на все анкеры / на один)',`${fmt(r.V,1)} / ${fmt(r.Va,1)} кН`],
+    ['Прогиб торца от нормативных нагрузок / допуск 2L/180',`${fmt(r.defl,1)} / ${fmt(r.flim,1)} мм`],
+    ['Сечение: A / I / W / i',`${fmt(r.A/100,2)} см² / ${fmt(r.I/1e4,1)} см⁴ / ${fmt(r.W/1e3,1)} см³ / ${fmt(r.ir/10,2)} см`],
+  ].map(([k,v])=>`<tr><td>${k}</td><td class="k">${v}</td></tr>`).join('');
+  // ---- purlins / deck / sheet
+  const E=206000, sn=p.Sg*p.mu, sd=sn*p.gfs, gd=p.g*p.gfg;
+  const trib=(p.x1+(p.x2-p.x1))/2/1000; // (883+770)/2
+  const Ip=0.96*(p.pb*p.ph**3-(p.pb-2*p.pt)*(p.ph-2*p.pt)**3)/12, Wp=Ip/(p.ph/2);
+  const qp=trib*(gd+sd), qpn=trib*(p.g+sn);
+  const Mp=qp*(p.pl/1000)**2/8, sigp=Mp*1e6/Wp, fp=5*qpn*p.pl**4/(384*E*Ip), fpl=p.pl/150;
+  const qtop=gd/2+sd, Md=qtop*(p.x1/1000)**2/8, Wreq=Md*1e6/p.Ry/1000;
+  const qs=(0.002*7850*9.81/1000)*p.gfg+sd, Ms=qs*(p.x1/1000)**2/8, sigs=Ms*1e6/(4/6*1000), fs=5*((0.002*7850*9.81/1000)+sn)/1000*p.x1**4/(384*E*(8/12));
+  const rowc=(k,lab,v,sub)=>`<tr><td>${lab}<br><span style="color:var(--muted);font-size:.8rem">${sub}</span></td><td class="k ${k===null?'':cls(k)}">${v}</td></tr>`;
+  $('purlin').querySelector('tbody').innerHTML=[
+    rowc(sigp/p.Ry,`Прогон ${p.ph}×${p.pb}×${p.pt}, пролёт ${p.pl} — прочность`,`${fmt(sigp,0)} МПа (${pct(sigp/p.Ry)})`,`q = ${fmt(trib,2)}·(${fmt(gd,2)}+${fmt(sd,2)}) = ${fmt(qp,2)} кН/м; M = q·l²/8 = ${fmt(Mp,2)} кН·м; W = ${fmt(Wp/1e3,1)} см³; σ = M/W`),
+    rowc(fp/fpl,`Прогон — прогиб`,`${fmt(fp,1)} мм при [f] = l/150 = ${fmt(fpl,1)}`,`f = 5·qₙ·l⁴/(384·E·I); qₙ = ${fmt(qpn,2)} кН/м; I = ${fmt(Ip/1e4,1)} см⁴`),
+    rowc(Wreq/p.dw,`Настил на пролёте ${p.x1} мм (гофра поперёк)`,`W_треб = ${fmt(Wreq,1)} см³/м из ${fmt(p.dw,1)} (${pct(Wreq/p.dw)})`,`M = ${fmt(qtop,2)}·${fmt(p.x1/1000,3)}²/8 = ${fmt(Md,2)} кН·м/м; W = M/Ry`),
+    rowc(sigs/230,`Лист 2 мм как несущий верх (для сравнения)`,`${fmt(sigs,0)} МПа, прогиб ${fmt(fs,0)} мм`,`полоса 1 м, W = t²/6 = 0,667 мм³/мм; M = ${fmt(Ms,3)} кН·м/м`),
+  ].join('');
+  // ---- node
+  const Mr=r.Mroot, Tlug=r.Ta, Wl=50*25/6, siglug=Tlug*1000*20/Wl;
+  const Tt=Mr/(p.z/1000), Ta=Tt/p.na, Wpl=150*p.tp**2/6, sigpl=Tt*1000*p.ep/Wpl;
+  const Nch=r.rows.find(x=>x.nm.startsWith('верх. пояс №3')).Nx, lw=120+p.lg, capw=0.7*p.kf*lw*180/1000;
+  $('node').querySelector('tbody').innerHTML=[
+    rowc(siglug/p.Ry,`Проушина уголок 65×50×5 L=50 по чертежу — изгиб полки`,`${fmt(siglug,0)} МПа (${pct(siglug/p.Ry)})`,`T = ${fmt(Tlug,1)} кН на анкер; e = 20 мм; W = 50·5²/6 = ${fmt(Wl,0)} мм³; σ = T·e/W`),
+    rowc(sigpl/p.Ry,`Пластина t = ${p.tp} мм под растянутым анкером`,`${fmt(sigpl,0)} МПа (${pct(sigpl/p.Ry)})`,`T_ряда = M/z = ${fmt(Mr,1)}/${fmt(p.z/1000,2)} = ${fmt(Tt,1)} кН; полоса b_eff = 150; W = 150·t²/6 = ${fmt(Wpl,0)} мм³; σ = T·e/W, e = ${p.ep}`),
+    rowc(Ta*1.2/p.Tadm,`Анкер при плече z = ${p.z} мм, ${p.na} шт. в ряду, с рычажным эффектом ×1,2`,`${fmt(Ta*1.2,1)} кН из ${fmt(p.Tadm,0)} (${pct(Ta*1.2/p.Tadm)})`,`T_анкера = T_ряда/n · 1,2`),
+    rowc(Nch/capw,`Шов пояс №3 / стойка △${p.kf}${p.lg?' + косынки':''}`,`${fmt(Nch,1)} кН из ${fmt(capw,1)} (${pct(Nch/capw)})`,`N_w = 0,7·kf·l_w·Rwf = 0,7·${p.kf}·${lw}·180; Rwf = 180 МПа (Э46)`),
+    rowc(null,`Опирание низа стойки на бетон`,`${fmt(r.S1x*1000/(250*120),2)} МПа из 14,5 (B25)`,`σ = N/(250·120)`),
+  ].join('');
+  $('notes').textContent=(p.plate>=1?'Стойка считается приваренной к жёсткой опорной пластине — изгиб стойки между анкерами снят. ':'Стойка держится тремя точечными проушинами — её изгиб между анкерами (стойка №2) реален и виден в таблице. ')+'Проушины из уголка 65×50×5 по чертежу не рассчитываются здесь намеренно: полка 5 мм гнётся при любой из этих нагрузок, узел нужно менять на опорную пластину. Сжатый пояс и раскосы проверены с расчётной длиной, равной длине стержня.';
+  window._res=r; window._p=p;
+}
+document.querySelectorAll('#f input').forEach(el=>el.addEventListener('input',run));
+document.querySelectorAll('.presets button').forEach(bt=>bt.addEventListener('click',()=>{const [a,mu]=bt.dataset.p.split(',');$('a').value=a;$('mu').value=mu;run();}));
+const setv=o=>{Object.entries(o).forEach(([k,v])=>$(k).value=v);run();};
+$('nodeDraw').addEventListener('click',()=>setv({z:440,na:2,Tadm:20,plate:0,tp:12,ep:20,kf:4,lg:0}));
+$('nodeNew').addEventListener('click',()=>setv({z:700,na:2,Tadm:35,plate:1,tp:20,ep:45,kf:5,lg:320}));
+$('csv').addEventListener('click',()=>{
+  const r=window._res,p=window._p;if(!r)return;
+  let c='Параметры;'+Object.entries(p).map(([k,v])=>k+'='+v).join(';')+'\n';
+  c+='Стержень;L мм;N кН;M кНм;σ МПа;φ;прочность;устойчивость\n';
+  r.rows.forEach(x=>c+=[x.nm+' '+x.i+'-'+x.j,x.L.toFixed(0),x.Nx.toFixed(2),x.M.toFixed(3),x.sig.toFixed(0),x.phi===null?'':x.phi.toFixed(3),x.kt.toFixed(3),x.phi===null?'':x.kb.toFixed(3)].join(';')+'\n');
+  c+=`Анкер верх ряд кН;${r.S3x.toFixed(2)}\nНа анкер кН;${r.Ta.toFixed(2)}\nОпирание кН;${r.S1x.toFixed(2)}\nСрез кН;${r.V.toFixed(2)}\nПрогиб мм;${r.defl.toFixed(2)}\n`;
+  const a=document.createElement('a');a.href=URL.createObjectURL(new Blob(['\ufeff'+c],{type:'text/csv;charset=utf-8'}));a.download='ferma_kozyrek.csv';a.click();
+});
+run();
+})();
+</script>
+</body>
+</html>
